@@ -11,7 +11,6 @@ import com.kumar.acronyms.utils.Logger
 import kotlinx.android.synthetic.main.item_layout.view.*
 
 
-
 class AcronymsAdapter(private val acronyms: ArrayList<String>) :
     RecyclerView.Adapter<AcronymsAdapter.DataViewHolder>() {
 
@@ -19,10 +18,7 @@ class AcronymsAdapter(private val acronyms: ArrayList<String>) :
 
         fun bind(acronym: String) {
             itemView.apply {
-             Logger.info("Adapter","${acronym}")
                 txt_view_acronyms.text = acronym
-                txt_view_acronyms.setTextColor(Color.parseColor("#bdbdbd"))
-
             }
         }
     }
@@ -41,7 +37,7 @@ class AcronymsAdapter(private val acronyms: ArrayList<String>) :
     fun addAcronym(acronymsResponse: List<String>) {
         this.acronyms.apply {
             clear()
-            addAll(acronyms)
+            addAll(acronymsResponse)
         }
 
     }
