@@ -1,15 +1,12 @@
 package com.kumar.acronyms.ui.view
 
-import android.annotation.SuppressLint
-import android.content.Context
-import android.net.ConnectivityManager
-import android.net.NetworkCapabilities
 import android.os.Build
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.View
 import android.widget.Toast
+import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProviders
@@ -28,11 +25,17 @@ import com.kumar.acronyms.utils.Logger
 import com.kumar.acronyms.utils.Status
 import kotlinx.android.synthetic.main.activity_main.*
 
+/**
+ * This activity used to get acronyms abbreviation by using
+ * http://www.nactem.ac.uk/software/acromine/dictionary.py?sf="SIM"
+ */
+
 class MainActivity : AppCompatActivity() {
 
 
     private lateinit var viewModel: MainViewModel
     private lateinit var adapter: AcronymsAdapter
+    val filtered = mutableListOf<String>()
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -42,6 +45,9 @@ class MainActivity : AppCompatActivity() {
         setupUI()
     }
 
+    /**
+     * Set viewmodel
+     */
     private fun setupViewModel() {
         viewModel = ViewModelProviders.of(
             this,
@@ -61,6 +67,7 @@ class MainActivity : AppCompatActivity() {
         acronyms_recycler_view.adapter = adapter
 
         edt_txt_search.addTextChangedListener(object : TextWatcher {
+            @RequiresApi(Build.VERSION_CODES.M)
             override fun afterTextChanged(s: Editable?) {
                 if (AcronymsUtil.isNetworkAvailable(this@MainActivity)) {
                     setupObservers(s.toString())
@@ -71,7 +78,7 @@ class MainActivity : AppCompatActivity() {
                         Toast.LENGTH_LONG
                     )
                         .show()
-                    resetAdapter()
+                    resetAdapter(filtered)
                 }
             }
 
@@ -93,7 +100,7 @@ class MainActivity : AppCompatActivity() {
                             Logger.info("MainActivity", "service is getting success")
                             acronyms_recycler_view.visibility = View.VISIBLE
                             progressBar.visibility = View.GONE
-                            retrieveList(resource.data);
+                            updateAdapter(resource.data);
                         }
                         Status.ERROR -> {
                             Logger.info("MainActivity", "service is getting error")
@@ -103,7 +110,7 @@ class MainActivity : AppCompatActivity() {
                                 "MainActivity",
                                 "Message - ${it.message} , Status - ${it.status}"
                             )
-                            resetAdapter()
+                            resetAdapter(filtered)
                             Toast.makeText(this, it.message, Toast.LENGTH_LONG).show()
                         }
                         Status.LOADING -> {
@@ -120,25 +127,31 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun retrieveList(acronymsResponse: List<AcronymsResponse>?) {
+    private fun updateAdapter(acronymsResponse: List<AcronymsResponse>?) {
+        val filtered = getAdapterAcronymValue(acronymsResponse)
+        if (filtered?.size == 0) {
+            Toast.makeText(this, "No Result found", Toast.LENGTH_LONG).show()
+        }
+        resetAdapter(filtered)
+    }
 
+    /**
+     *get abbreviation value from service response
+     */
+    private fun getAdapterAcronymValue(acronymsResponse: List<AcronymsResponse>?): MutableList<String> {
         val filtered = mutableListOf<String>()
         if (acronymsResponse != null && acronymsResponse?.size > 0) {
             acronymsResponse.get(0).lfs.forEach { element -> element.lf?.let { filtered.add(it) } }
             Logger.info("MainActivity", "${Gson().toJson(filtered)}")
-        } else {
-            Toast.makeText(this, "No Result found", Toast.LENGTH_LONG).show()
         }
-
-
-        adapter.apply {
-            addAcronym(filtered)
-            notifyDataSetChanged()
-        }
+        return filtered;
     }
 
-    private fun resetAdapter() {
-        val filtered = mutableListOf<String>()
+    /**
+     * Reset adapter when error occurred & no result found
+     */
+
+    private fun resetAdapter(filtered: MutableList<String>) {
         adapter.apply {
             addAcronym(filtered)
             notifyDataSetChanged()
